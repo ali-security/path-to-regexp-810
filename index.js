@@ -1,4 +1,4 @@
-/**
+      /**
  * Expose `pathToRegexp`.
  */
 
@@ -68,20 +68,27 @@ function pathToRegexp(path, keys, options) {
   path = path.replace(
     /\\.|(\/)?(\.)?:(\w+)(\(.*?\))?(\*)?(\?)?|[.*]|\/\(/g,
     function (match, slash, format, key, capture, star, optional, offset) {
-      pos = offset + match.length;
 
       if (match[0] === '\\') {
         backtrack += match;
+        pos += 2;
         return match;
       }
 
       if (match === '.') {
         backtrack += '\\.';
         extraOffset += 1;
+        pos += 1;
         return '\\.';
       }
 
-      backtrack = slash || format ? '' : path.slice(pos, offset);
+      if (slash || format) {
+        backtrack = '';
+      } else {
+        backtrack += path.slice(pos, offset);
+      }
+
+      pos = offset + match.length;
 
       if (match === '*') {
         extraOffset += 3;
@@ -97,9 +104,9 @@ function pathToRegexp(path, keys, options) {
       slash = slash || '';
       format = format ? '\\.' : '';
       optional = optional || '';
-      capture = capture ?
-        capture.replace(/\\.|\*/, function (m) { return m === '*' ? '(.*)' : m; }) :
-        (backtrack ? '((?:(?!/|' + backtrack + ').)+?)' : '([^/' + format + ']+?)');
+      capture = capture
+        ? capture.replace(/\\.|\*/g, function (m) { return m === '*' ? '(.*)' : m; })
+        : (backtrack ? '((?:(?!/|' + backtrack + ').)+?)' : '([^/' + format + ']+?)');
 
       keys.push({
         name: key,
@@ -107,16 +114,17 @@ function pathToRegexp(path, keys, options) {
         offset: offset + extraOffset
       });
 
-      var result = '(?:'
-        + format + slash + capture
-        + (star ? '((?:[/' + format + '].+?)?)' : '')
-        + ')'
-        + optional;
+      var result = '(?:' +
+        format + slash + capture +
+        (star ? '((?:[/' + format + '].+?)?)' : '') +
+        ')' +
+        optional;
 
       extraOffset += result.length - match.length;
 
       return result;
-    });
+    }
+  );
 
   // This is a workaround for handling unnamed matching groups.
   while (m = MATCHING_GROUP_REGEXP.exec(path)) {
